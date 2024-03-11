@@ -1,0 +1,60 @@
+let
+    Fonte = {Number.From(#date(2022,1,1))..Number.From(#date(2024,12,31))},
+    #"Convertido para Tabela" = Table.FromList(Fonte, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
+    #"Tipo Alterado1" = Table.TransformColumnTypes(#"Convertido para Tabela",{{"Column1", type date}}),
+    #"Colunas Renomeadas" = Table.RenameColumns(#"Tipo Alterado1",{{"Column1", "Date"}}),
+    #"Cria Dia Util Brasil" = Table.AddColumn(#"Colunas Renomeadas", "Fl_Du", each let
+        Ano = Date.Year([Date]),
+        X=24,
+        Y=5,
+        a = Number.Mod(Ano, 19),
+        b = Number.Mod(Ano, 4),
+        c = Number.Mod(Ano, 7),
+        d = Number.Mod((19 * a + X), 30),
+        e = Number.Mod((2 * b + 4 * c + 6 * d + Y), 7),
+        Dia1 = (d + e - 9),
+        Dia2 = (d + e + 22),
+        Mes1 = 4,
+        Mes2 = 3,
+        Pascoa = if (d + e) > 9 then
+                    DateTime.Date(#datetime(Ano, Mes1, Dia1, 01, 01, 01))
+                 else
+                    DateTime.Date(#datetime(Ano, Mes2, Dia2, 01, 01, 01)),
+        SextaSanta = Date.AddDays(Pascoa, -2),
+        SegCarnaval = Date.AddDays(Pascoa, -46),
+        TerCarnaval = Date.AddDays(Pascoa, -47),
+        CorpusC = Date.AddDays(Pascoa, 60),
+        Rev = #date(Ano,1,1),
+        Tir = #date(Ano,4,21),
+        DiaTrab = #date(Ano,5,1),
+        Indep = #date(Ano,9,7),
+        NSA = #date(Ano,10,12),
+        Fina = #date(Ano,11,2),
+        ProcRp= #date(Ano,11,15),
+        Natal = #date(Ano,12,25),
+        WeekDay = Date.DayOfWeek([Date])
+    in
+        if Rev = [Date] then 0
+        else if Tir = [Date] then 0
+        else if Pascoa = [Date] then 0
+        else if SextaSanta = [Date] then 0
+        else if SegCarnaval = [Date] then 0
+        else if TerCarnaval = [Date] then 0
+        else if CorpusC = [Date] then 0
+        else if DiaTrab = [Date] then 0
+        else if Indep = [Date] then 0
+        else if NSA = [Date] then 0
+        else if Fina = [Date] then 0
+        else if ProcRp = [Date] then 0
+        else if Natal = [Date] then 0
+        else if WeekDay = 0 or WeekDay = 6 then 0
+        else 1),
+    #"Altera Tipo Dia Util" = Table.TransformColumnTypes(#"Cria Dia Util Brasil",{{"Fl_Du", Int64.Type}}),
+    Dt_ini_mes = Table.AddColumn(#"Altera Tipo Dia Util", "Início do Mês", each Date.StartOfMonth([Date]), type date),
+    #"Added Custom" = Table.AddColumn(Dt_ini_mes, "Dia_Util_Mes", each List.Sum(Table.SelectRows(#"Dt_ini_mes",
+                (DU) => DU[Date] <= [Date]
+                and DU[Date] >= [Início do Mês])[Fl_Du]), type number),
+    #"Inserted Year" = Table.AddColumn(#"Added Custom", "Ano", each Date.Year([Date]), Int64.Type),
+    #"Inserted Month" = Table.AddColumn(#"Inserted Year", "Mês", each Date.Month([Date]), Int64.Type)
+in
+    #"Inserted Month"
